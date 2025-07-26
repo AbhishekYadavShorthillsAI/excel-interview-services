@@ -63,6 +63,9 @@ logs/
 *secret*
 .secrets/
 
+# Deployment guide with secrets (keep local only)
+docs/DEPLOYMENT_GUIDE.md
+
 # Google Cloud
 .gcloud/
 service-account-key.json
