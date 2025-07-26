@@ -1,0 +1,4 @@
+steps:
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['build', '-f', 'generator/Dockerfile', '-t', 'gcr.io/$PROJECT_ID/generator-backend:latest', '.']
+images: ['gcr.io/$PROJECT_ID/generator-backend:latest'] 

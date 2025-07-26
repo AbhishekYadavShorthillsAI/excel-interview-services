@@ -1,0 +1,50 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: interview-backend
+  annotations:
+    run.googleapis.com/ingress: all
+    run.googleapis.com/execution-environment: gen2
+spec:
+  template:
+    metadata:
+      annotations:
+        run.googleapis.com/cpu-throttling: "false"
+        run.googleapis.com/memory: "2Gi"
+        run.googleapis.com/cpu: "1000m"
+    spec:
+      containerConcurrency: 100
+      timeoutSeconds: 300
+      containers:
+      - image: gcr.io/PROJECT_ID/interview-backend:latest
+        ports:
+        - containerPort: 8001
+        env:
+        - name: HOST
+          value: "0.0.0.0"
+        - name: MONGODB_URI
+          valueFrom:
+            secretKeyRef:
+              name: interview-secrets
+              key: mongodb-uri
+        - name: GEMINI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: interview-secrets
+              key: gemini-api-key
+        resources:
+          limits:
+            cpu: 1000m
+            memory: 2Gi
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8001
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8001
+          initialDelaySeconds: 5
+          periodSeconds: 5 

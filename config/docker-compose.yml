@@ -1,0 +1,101 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: ai_services_mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password123
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - ai_services_network
+
+  generator_backend:
+    build:
+      context: .
+      dockerfile: generator/Dockerfile
+    container_name: generator_backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - MONGODB_URI=mongodb://admin:password123@mongodb:27017/excel_interviewer?authSource=admin
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - PERPLEXITY_API_KEY=${PERPLEXITY_API_KEY}
+      - HOST=0.0.0.0
+      - PORT=8000
+    depends_on:
+      - mongodb
+    networks:
+      - ai_services_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  generator_frontend:
+    build:
+      context: .
+      dockerfile: generator/Dockerfile.streamlit
+    container_name: generator_frontend
+    restart: unless-stopped
+    ports:
+      - "8502:8502"
+    environment:
+      - API_BASE_URL=http://generator_backend:8000/api/v1
+    depends_on:
+      - generator_backend
+    networks:
+      - ai_services_network
+
+  interview_backend:
+    build:
+      context: .
+      dockerfile: interview/Dockerfile
+    container_name: interview_backend
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    environment:
+      - MONGODB_URI=mongodb://admin:password123@mongodb:27017/excel_interviewer?authSource=admin
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - HOST=0.0.0.0
+      - PORT=8001
+    depends_on:
+      - mongodb
+      - generator_backend  # Interview service needs generator to create questions first
+    networks:
+      - ai_services_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  interview_frontend:
+    build:
+      context: .
+      dockerfile: interview/Dockerfile.streamlit
+    container_name: interview_frontend
+    restart: unless-stopped
+    ports:
+      - "8501:8501"
+    environment:
+      - API_BASE_URL=http://interview_backend:8001/api/v1/interview
+    depends_on:
+      - interview_backend
+    networks:
+      - ai_services_network
+
+volumes:
+  mongodb_data:
+
+networks:
+  ai_services_network:
+    driver: bridge 

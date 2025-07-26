@@ -1,0 +1,40 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: interview-frontend
+  annotations:
+    run.googleapis.com/ingress: all
+    run.googleapis.com/execution-environment: gen2
+spec:
+  template:
+    metadata:
+      annotations:
+        run.googleapis.com/cpu-throttling: "false"
+        run.googleapis.com/memory: "1Gi"
+        run.googleapis.com/cpu: "500m"
+    spec:
+      containerConcurrency: 50
+      timeoutSeconds: 300
+      containers:
+      - image: gcr.io/PROJECT_ID/interview-frontend:latest
+        ports:
+        - containerPort: 8501
+        env:
+        - name: API_BASE_URL
+          value: "https://interview-backend-HASH-uc.a.run.app/api/v1/interview"
+        resources:
+          limits:
+            cpu: 500m
+            memory: 1Gi
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8501
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 8501
+          initialDelaySeconds: 5
+          periodSeconds: 5 
